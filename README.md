@@ -2,7 +2,9 @@
 Projeto com intuito de testar Typescript dentro do Vue.js
 
 Backend - Symfony (php)
+
 Frontend - Quasar (Vue.js) - Typescript
+
 Banco - MySQL
 
 Banco: Para o teste foi criado duas entidades, uma chamada category (id, name), e outra chamada product (id, name, identifier, category[FK]).
