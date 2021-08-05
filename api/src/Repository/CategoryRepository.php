@@ -4,6 +4,7 @@ namespace App\Repository;
 
 use App\Entity\Category;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
+use Doctrine\ORM\Tools\Pagination\Paginator;
 use Doctrine\Persistence\ManagerRegistry;
 
 /**
@@ -11,6 +12,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method Category|null findOneBy(array $criteria, array $orderBy = null)
  * @method Category[]    findAll()
  * @method Category[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @method Category[]    getBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
  */
 class CategoryRepository extends ServiceEntityRepository
 {
@@ -18,33 +20,57 @@ class CategoryRepository extends ServiceEntityRepository
     {
         parent::__construct($registry, Category::class);
     }
-
-    // /**
-    //  * @return Category[] Returns an array of Category objects
-    //  */
-    /*
-    public function findByExampleField($value)
+    /**
+     * @param array $criteria
+     * @param array $orderBy
+     * @param int $limit
+     * @param int $offset
+     * @return array
+     */
+    public function getBy(array $criteria = null, array $orderBy = null, $limit = null, $offset = null)
     {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('p.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-    */
+        $qb = $this->createQueryBuilder("category");
 
-    /*
-    public function findOneBySomeField($value): ?Category
-    {
-        return $this->createQueryBuilder('p')
-            ->andWhere('p.exampleField = :val')
-            ->setParameter('val', $value)
-            ->getQuery()
-            ->getOneOrNullResult()
-        ;
+        /**************************************************************************************************************/
+
+        $termo = (isset($criteria["term"]) ? strtolower($criteria["term"]) : null);
+        if (!empty($termo)) {
+            $qb->andWhere(
+                $qb->expr()->orX(
+                    $qb->expr()->like("category.id", $qb->expr()->literal("%" . $termo . "%")),
+                    $qb->expr()->like("LOWER(category.name)", $qb->expr()->literal("%" . $termo . "%"))
+                )
+            );
+        }
+
+        /**************************************************************************************************************/
+
+        $offset = (($offset == 0) ? 1 : $offset);
+        $qb->setFirstResult(($offset - 1) * $limit)
+            ->setMaxResults($limit);
+
+        $paginator = new Paginator($qb->getQuery(), true);
+        $paginator->setUseOutputWalkers(false);
+
+        $totalResultados = $paginator->count();
+
+        if ($totalResultados == 0) {
+            $offset = 0;
+            $totalPaginas = 0;
+        } elseif (($totalResultados > 0 && $totalResultados < $limit) || ($limit == null)) {
+            $offset = 1;
+            $totalPaginas = 1;
+        } else {
+            $totalPaginas = (int) ceil($totalResultados / $limit);
+        }
+
+        /**************************************************************************************************************/
+
+        return array(
+            "data" => $paginator,
+            "page" => $offset,
+            "total" => $totalResultados,
+            "rowsPerPage" => $totalPaginas
+        );
     }
-    */
 }

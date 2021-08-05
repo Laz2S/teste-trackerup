@@ -3,6 +3,7 @@
 namespace App\Controller;
 
 use App\Entity\Category;
+use App\Entity\Product;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -15,11 +16,13 @@ class CategoryController extends AbstractController
     /**
      * @Route("/category", name="category_show", methods={"GET"})
      */
-    public function show(): Response
+    public function show(Request $request): Response
     {
+        $rowsPerPage = $request->query->get("rowsPerPage", null);
+        $page = $request->query->get("page", null);
         $categoryArray = $this->getDoctrine()
             ->getRepository(Category::class)
-            ->findAll();
+            ->getBy(array(), null, $rowsPerPage, $page);
 
         if (!$categoryArray) {
             throw $this->createNotFoundException(
@@ -29,11 +32,18 @@ class CategoryController extends AbstractController
 
         $data = array();
 
-        foreach($categoryArray as $category) {
+        foreach($categoryArray["data"] as $category) {
             array_push($data, $category->inicializar());
         }
 
-        return new Response(json_encode($data));
+        $response = array(
+            "data" => $data,
+            "page" => $categoryArray["page"],
+            "total" => $categoryArray["total"],
+            "rowsPerPage" => $categoryArray["rowsPerPage"]
+        );
+
+        return new Response(json_encode($response));
     }
 
     /**
@@ -68,6 +78,17 @@ class CategoryController extends AbstractController
                 'There is no category with id: '.$codigo
             );
         }
+
+        $product = $this->getDoctrine()
+            ->getRepository(Product::class)
+            ->findBy(array("category" => $codigo));
+
+        if ($product) {
+            throw $this->createNotFoundException(
+                'You cannot delete this category because already has relationship with a product.'
+            );
+        }
+
         $entityManager = $this->getDoctrine()->getManager();
 
         $entityManager->remove($category);

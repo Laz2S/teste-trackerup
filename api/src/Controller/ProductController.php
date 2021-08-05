@@ -16,13 +16,15 @@ class ProductController extends AbstractController
     /**
      * @Route("/product", name="product_show", methods={"GET"})
      */
-    public function show(): Response
+    public function show(Request $request): Response
     {
+        $rowsPerPage = $request->query->get("rowsPerPage", null);
+        $page = $request->query->get("page", null);
         $productArray = $this->getDoctrine()
             ->getRepository(Product::class)
-            ->findAll();
+            ->getBy(array(), null, $rowsPerPage, $page);
 
-        if (!$productArray) {
+        if (count($productArray["data"]) == 0) {
             throw $this->createNotFoundException(
                 'No product found.'
             );
@@ -30,11 +32,18 @@ class ProductController extends AbstractController
 
         $data = array();
 
-        foreach($productArray as $product) {
+        foreach($productArray["data"] as $product) {
             array_push($data, $product->inicializar());
         }
 
-        return new Response(json_encode($data));
+        $response = array(
+            "data" => $data,
+            "page" => $productArray["page"],
+            "total" => $productArray["total"],
+            "rowsPerPage" => $productArray["rowsPerPage"]
+        );
+
+        return new Response(json_encode($response));
     }
 
     /**
@@ -96,10 +105,10 @@ class ProductController extends AbstractController
 
         $category = $this->getDoctrine()
             ->getRepository(Category::class)
-            ->find($parameters['category']);
+            ->find($parameters['category_id']);
         if (!$category) {
             throw $this->createNotFoundException(
-                'There is no category with id: '.$parameters['category']
+                'There is no category with id: '.$parameters['category_id']
             );
         }
 
@@ -138,10 +147,10 @@ class ProductController extends AbstractController
 
         $category = $this->getDoctrine()
             ->getRepository(Category::class)
-            ->find($parameters['category']);
+            ->find($parameters['category_id']);
         if (!$category) {
             throw $this->createNotFoundException(
-                'There is no category with id: '.$parameters['category']
+                'There is no category with id: '.$parameters['category_id']
             );
         }
 
